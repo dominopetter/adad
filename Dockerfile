@@ -76,7 +76,7 @@ RUN \
 
 # Install R packages
 RUN \
-	deb http://ubuntu.cs.utah.edu/ubuntu bionic-updates main && \
+	echo "deb http://ubuntu.cs.utah.edu/ubuntu bionic-updates main" >> /etc/apt/sources.list && \
     apt-get update --fix-missing && apt autoremove && apt-get upgrade -y && \
     apt-get install libgdal-dev -y && \
     R -e "install.packages('rgdal',repos='https://cran.revolutionanalytics.com/')" && \
