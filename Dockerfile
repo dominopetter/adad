@@ -1,29 +1,16 @@
-FROM ubuntu:18.04
+# Built with arch: amd64 flavor: lxde image: ubuntu:18.04
+#
+################################################################################
+# base system
+################################################################################
 
-LABEL maintainer="Petter Olsson <petter.olsson@dominodatalab.com>"
-LABEL name="Accelerated Domino Analytics Distribution"
+FROM ubuntu:18.04 as system
 
-# Utilities required by Domino
-ENV DEBIAN_FRONTEND noninteractive
+RUN sed -i 's#http://archive.ubuntu.com/ubuntu/#mirror://mirrors.ubuntu.com/mirrors.txt#' /etc/apt/sources.list;
 
-# Create the Ubuntu User
-RUN \
-  groupadd -g 12574 ubuntu && \
-  useradd -u 12574 -g 12574 -m -N -s /bin/bash ubuntu
+RUN groupadd -g 12574 ubuntu && useradd -u 12574 -g 12574 -m -N -s /bin/bash ubuntu
+RUN apt-get install -y locales && locale-gen en_US.UTF-8 && dpkg-reconfigure locales
 
-# Update, Upgrade, and Add repositories
-RUN \
-  apt-get update -y && \
-  apt-get -y install software-properties-common apt-utils && \
-  apt-get -y upgrade
-
-# Configure Locales
-RUN \
-  apt-get install -y locales && \
-  locale-gen en_US.UTF-8 && \
-  dpkg-reconfigure locales
-
-# Install common
 RUN \
   apt-get -y install build-essential wget sudo curl apt-utils net-tools libzmq3-dev ed git ca-certificates iputils-ping dnsutils telnet apt-transport-https vim python3-pip jq && \
   apt-get install openjdk-8-jdk -y && \
@@ -53,46 +40,106 @@ RUN \
 ENV LANG en_US.UTF-8
 ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 
-# Install R
-RUN \
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9 && \
-    add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/' && \
-    apt-get update -y && \
-    apt-get install r-base r-base-dev -y
+# built-in packages
+ENV DEBIAN_FRONTEND noninteractive
+RUN apt update \
+    && apt install -y --no-install-recommends software-properties-common apt-utils curl apache2-utils \
+    && apt update \
+    && apt install -y --no-install-recommends --allow-unauthenticated \
+        supervisor nginx sudo net-tools zenity xz-utils \
+        dbus-x11 x11-utils alsa-utils \
+        mesa-utils libgl1-mesa-dri \
+    && apt autoclean -y \
+    && apt autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
+# install debs error if combine together
+RUN add-apt-repository -y ppa:fcwu-tw/apps \
+    && apt update \
+    && apt install -y --no-install-recommends --allow-unauthenticated \
+        xvfb x11vnc=0.9.16-1 \
+        vim-tiny firefox chromium-browser ttf-ubuntu-font-family ttf-wqy-zenhei  \
+    && add-apt-repository -r ppa:fcwu-tw/apps \
+    && apt autoclean -y \
+    && apt autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
-# Dependencies of various R packages
-RUN \
-    apt-get install -y libcairo2-dev  libxt-dev libgmp3-dev jags libgsl0-dev libx11-dev mesa-common-dev libglu1-mesa-dev libmpfr-dev libfftw3-dev libtiff5-dev libiodbc2-dev libudunits2-dev libopenmpi-dev libmysqlclient-dev -y
+RUN apt update \
+    && apt install -y --no-install-recommends --allow-unauthenticated \
+        lxde gtk2-engines-murrine gnome-themes-standard gtk2-engines-pixbuf gtk2-engines-murrine arc-theme \
+    && apt autoclean -y \
+    && apt autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
-# Required for rJava
-RUN \
-    export LD_LIBRARY_PATH=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server && \
-    echo "export LD_LIBRARY_PATH=/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/amd64/server:\${LD_LIBRARY_PATH:-}" >> /home/ubuntu/.domino-defaults && \
-    R CMD javareconf
+# Additional packages require ~600MB
+# libreoffice  pinta language-pack-zh-hant language-pack-gnome-zh-hant firefox-locale-zh-hant libreoffice-l10n-zh-tw
 
-# Install R packages required by Domino
-RUN \
-    R -e 'options(repos=structure(c(CRAN="http://cran.us.r-project.org"))); install.packages(c( "plumber","yaml", "shiny"))'
+# tini to fix subreap
+ARG TINI_VERSION=v0.18.0
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /bin/tini
+RUN chmod +x /bin/tini
 
-# Install R packages
-RUN \
-	echo "deb http://ubuntu.cs.utah.edu/ubuntu bionic-updates main" >> /etc/apt/sources.list && \
-    apt-get update --fix-missing && apt autoremove && apt-get upgrade -y && \
-    apt-get install libgdal-dev -y && \
-    R -e "install.packages('rgdal',repos='https://cran.revolutionanalytics.com/')" && \
-    R -e 'options(repos=structure(c(CRAN="http://cran.us.r-project.org"))); install.packages(c( "devtools", "stringi", "httpuv","RJSONIO", "Cairo", "jsonlite","RJDBC"))' && \
-    R --no-save -e "install.packages(c('tidyverse','domino','feather','choroplethr', 'choroplethrMaps','DT','ggvis'), repos='https://cran.revolutionanalytics.com/',clean=TRUE,Ncpus = getOption('Ncpus', 4L))" && \
-    R --no-save -e 'install.packages(c("keras","sparklyr","mongolite","forecast","abind", "acepack", "ade4", "akima", "alr3","ape", "argparse", "assertthat", "aws.s3", "aws.signature", "backports", "base64", "base64enc", "BH", "bibtex", "biglm", "bit", "bit64", "bitops", "BradleyTerry2", "brew", "brglm", "BTYD", "bvls", "car", "caret"),repos="https://cran.revolutionanalytics.com/",clean=TRUE,Ncpus = getOption("Ncpus", 4L))' && \
-    R --no-save -e 'install.packages(c("caTools",  "chron", "circular", "clue", "clusterGeneration", "coda", "coin", "colorRamps", "colorspace", "combinat", "contfrac", "corpcor", "corrgram", "corrplot", "crayon", "curl", "data.table", "DBI", "deldir", "dendextend", "DEoptimR", "deSolve", "devtools", "dichromat", "digest", "diptest", "dmt", "doMC", "doParallel", "doRedis"),repos="https://cran.revolutionanalytics.com/",clean=TRUE,Ncpus = getOption("Ncpus", 4L))' && \
-    R --no-save -e 'install.packages(c("doRNG", "dynlm", "e1071", "earth", "elasticnet", "ellipse", "elliptic", "evaluate", "expm", "extrafont", "extrafontdb", "fastICA", "fastmatch", "fBasics", "ff", "findpython", "flexmix", "FMStable", "foreach", "forecast", "formatR", "Formula", "fpc", "fracdiff", "gains", "gam", "gbm", "gclus", "gdata", "gee"),repos="https://cran.revolutionanalytics.com/",clean=TRUE,Ncpus = getOption("Ncpus", 4L))' && \
-    R --no-save -e 'install.packages(c("geepack", "geiger", "getopt", "ggfortify", "git2r", "glmnet", "gmp", "gplots", "googlesheets","gridExtra", "gss", "gtable", "gtools", "h2o", "hexbin", "hflights", "highlight", "highr", "Hmisc", "htmltools", "htmlwidgets", "httpuv", "httr", "hypergeo", "igraph", "igraphdata", "inline", "intervals", "ipred", "IRdisplay"),repos="https://cran.revolutionanalytics.com/",clean=TRUE,Ncpus = getOption("Ncpus", 4L))' && \
-    R --no-save -e 'install.packages(c("IRkernel", "iterators", "itertools", "jpeg", "jsonlite", "kernlab", "KFAS", "klaR", "knitr", "labeling", "Lahman", "lars", "lasso2", "lattice", "latticeExtra", "lava", "lazyeval", "lda", "LDPD", "leaflet","leaps", "LearnBayes", "lme4", "lmtest", "locfit", "logspline", "lokern", "lpSolve", "lubridate", "magrittr"),repos="https://cran.revolutionanalytics.com/",clean=TRUE,Ncpus = getOption("Ncpus", 4L))' && \
-    R --no-save -e 'install.packages(c("mailR", "mapproj", "maps", "maptools", "markdown", "MARSS", "MatrixModels", "matrixStats", "mclust", "mda", "memoise", "mgcv", "mice", "microbenchmark", "mime", "miniUI", "minqa", "misc3d", "mix", "mixtools", "mlbench", "mnormt", "modeltools", "msm", "multcomp", "munsell", "mvtnorm", "ncbit", "nleqslv", "nloptr"),repos="https://cran.revolutionanalytics.com/",clean=TRUE,Ncpus = getOption("Ncpus", 4L))' && \
-    R --no-save -e 'install.packages(c("NLP", "nnls", "nor1mix", "numDeriv", "nws", "OAIHarvester", "openssl", "pander", "party", "pbkrtest", "PerformanceAnalytics", "permute", "phangorn", "pheatmap", "phylobase", "picante", "pipeR", "pixmap", "pkgmaker", "plotly", "plotmo", "plotrix", "pls", "plyr", "png", "polspline", "PortfolioAnalytics", "ppcor", "prabclus", "pROC"),repos="https://cran.revolutionanalytics.com/",clean=TRUE,Ncpus = getOption("Ncpus", 4L))' && \
-    R --no-save -e 'install.packages(c("prodlim", "profileModel", "proto", "proxy", "psych", "qap", "quadprog", "Quandl", "quantmod", "quantreg", "R2jags", "R2WinBUGS", "R6", "randomForest", "RANN", "rbenchmark", "R.cache", "RColorBrewer", "Rcpp", "RcppArmadillo", "RcppEigen", "RcppGSL", "RcppRoll", "RCurl", "R.devices", "registry", "relations", "repr", "reshape", "reshape2", "R.filesets", "RGCCA", "rgl", "RGraphics", "R.huge", "ridge", "rjags", "rJava", "rjson", "RJSONIO", "rlecuyer", "rmarkdown"),repos="https://cran.revolutionanalytics.com/",clean=TRUE,Ncpus = getOption("Ncpus", 4L))' && \
-#   R --no-save -e 'install.packages(c("R.methodsS3", "Rmpfr", "Rmpi", "rms", "rngtools", "robustbase", "ROCR", "R.oo", "Rook", "roxygen2", "RPMM", "rprojroot", "rredis", "R.rsp", "Rserve", "RSQLite", "rstan", "rstudioapi", "Rttf2pt1", "RUnit", "R.utils", "rversions", "rzmq", "sandwich", "scales", "scatterplot3d", "segmented", "seriation", "sets", "sfsmisc", "shinydashboard", "shinyjs", "sitools", "sjmisc", "sjPlot", "slackr", "slam", "sm", "snow", "SnowballC", "snowfall", "sourcetools"),repos="https://cran.revolutionanalytics.com/",clean=TRUE,Ncpus = getOption("Ncpus", 4L))' && \
-#	R --no-save -e 'install.packages(c("sp", "spam", "SparseM", "spdep", "spls", "stabledist", "stargazer", "statmod", "stringi", "strucchange", "subplex", "survey", "tables", "TeachingDemos", "testthat", "TH.data", "tiff", "timeDate", "timeSeries", "tm", "topicmodels", "trimcluster", "tripack", "tseries", "TSP", "TTR", "tweedie", "uuid", "vcd", "vegan"),repos="https://cran.revolutionanalytics.com/",clean=TRUE,Ncpus = getOption("Ncpus", 4L))' && \
-#	R --no-save -e 'install.packages(c("VGAM", "VGAMdata", "viridis", "whisker", "xgboost", "XLConnect", "XLConnectJars", "xlsx", "xlsxjars", "XML", "xml2", "xtable", "xts", "zoo", "base", "boot", "class", "cluster", "codetools", "compiler", "datasets", "foreign", "graphics", "grDevices", "grid", "KernSmooth", "lattice", "MASS", "Matrix"),repos="https://cran.revolutionanalytics.com/",clean=TRUE,Ncpus = getOption("Ncpus", 4L))' && \
-    R --no-save -e 'install.packages(c("methods", "mgcv", "nlme", "nnet", "parallel", "rpart", "spatial", "splines", "stats", "stats4", "survival", "tcltk", "tools", "utils"),repos="https://cran.revolutionanalytics.com/",clean=TRUE,Ncpus = getOption("Ncpus", 4L))' && \
-    rm -rf /usr/local/lib/R/site-library/XLConnect/unitTests/resources/testBug61.xlsx && \
-    chown -R ubuntu:ubuntu /usr/local/lib/R/site-library
+# ffmpeg
+RUN apt update \
+    && apt install -y --no-install-recommends --allow-unauthenticated \
+        ffmpeg \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir /usr/local/ffmpeg \
+    && ln -s /usr/bin/ffmpeg /usr/local/ffmpeg/ffmpeg
+
+# python library
+COPY rootfs/usr/local/lib/web/backend/requirements.txt /tmp/
+RUN apt-get update \
+    && dpkg-query -W -f='${Package}\n' > /tmp/a.txt \
+    && apt-get install -y python-pip python-dev build-essential \
+	&& pip install setuptools wheel && pip install -r /tmp/requirements.txt \
+    && dpkg-query -W -f='${Package}\n' > /tmp/b.txt \
+    && apt-get remove -y `diff --changed-group-format='%>' --unchanged-group-format='' /tmp/a.txt /tmp/b.txt | xargs` \
+    && apt-get autoclean -y \
+    && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/cache/apt/* /tmp/a.txt /tmp/b.txt
+
+################################################################################
+# builder
+################################################################################
+FROM ubuntu:18.04 as builder
+
+RUN sed -i 's#http://archive.ubuntu.com/ubuntu/#mirror://mirrors.ubuntu.com/mirrors.txt#' /etc/apt/sources.list;
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl ca-certificates gnupg patch
+
+# nodejs
+RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - \
+    && apt-get install -y nodejs
+
+# yarn
+RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
+    && echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list \
+    && apt-get update \
+    && apt-get install -y yarn
+
+# build frontend
+COPY web /src/web
+RUN cd /src/web \
+    && yarn \
+    && yarn build
+RUN sed -i 's#app/locale/#novnc/app/locale/#' /src/web/dist/static/novnc/app/ui.js
+
+################################################################################
+# merge
+################################################################################
+FROM system
+LABEL maintainer="fcwu.tw@gmail.com"
+
+COPY --from=builder /src/web/dist/ /usr/local/lib/web/frontend/
+COPY rootfs /
+RUN ln -sf /usr/local/lib/web/frontend/static/websockify /usr/local/lib/web/frontend/static/novnc/utils/websockify && \
+	chmod +x /usr/local/lib/web/frontend/static/websockify/run
+
+EXPOSE 80
+WORKDIR /root
+ENV HOME=/home/ubuntu \
+    SHELL=/bin/bash
+HEALTHCHECK --interval=30s --timeout=5s CMD curl --fail http://127.0.0.1:6079/api/health
+ENTRYPOINT ["/startup.sh"]
