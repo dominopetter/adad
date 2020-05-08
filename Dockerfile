@@ -3,6 +3,7 @@
 ################################################################################
 # base system
 ################################################################################
+# This is the first test
 
 FROM ubuntu:18.04 as system
 
@@ -91,7 +92,11 @@ COPY rootfs/usr/local/lib/web/backend/requirements.txt /tmp/
 RUN apt-get update \
     && dpkg-query -W -f='${Package}\n' > /tmp/a.txt \
     && apt-get install -y python-pip python-dev build-essential \
+<<<<<<< HEAD
   && pip install setuptools wheel && pip install -r /tmp/requirements.txt \
+=======
+	&& pip install setuptools wheel && pip install -r /tmp/requirements.txt \
+>>>>>>> af23f1e7535e95a11b3c37f781631df9a87a6a3a
     && dpkg-query -W -f='${Package}\n' > /tmp/b.txt \
     && apt-get remove -y `diff --changed-group-format='%>' --unchanged-group-format='' /tmp/a.txt /tmp/b.txt | xargs` \
     && apt-get autoclean -y \
@@ -135,11 +140,19 @@ LABEL maintainer="fcwu.tw@gmail.com"
 COPY --from=builder /src/web/dist/ /usr/local/lib/web/frontend/
 COPY rootfs /
 RUN ln -sf /usr/local/lib/web/frontend/static/websockify /usr/local/lib/web/frontend/static/novnc/utils/websockify && \
+<<<<<<< HEAD
   chmod +x /usr/local/lib/web/frontend/static/websockify/run
+=======
+	chmod +x /usr/local/lib/web/frontend/static/websockify/run
+>>>>>>> af23f1e7535e95a11b3c37f781631df9a87a6a3a
 
 EXPOSE 80
 WORKDIR /root
 ENV HOME=/home/ubuntu \
     SHELL=/bin/bash
 HEALTHCHECK --interval=30s --timeout=5s CMD curl --fail http://127.0.0.1:6079/api/health
+<<<<<<< HEAD
 ENTRYPOINT ["/startup.sh"]
+=======
+ENTRYPOINT ["/startup.sh"]
+>>>>>>> af23f1e7535e95a11b3c37f781631df9a87a6a3a
