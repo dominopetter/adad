@@ -7,7 +7,7 @@ v.1 - 2020-05-29\
 Docker Hub Link         : https://hub.docker.com/repository/docker/petterolsson/adad/general
 
 To add it to Domino Link: docker.io/petterolsson/adad:v1
-\
+
 R 4.0.0\
 Python 3.8\
 Oracle Instantclient 19.6\
