@@ -1,4 +1,4 @@
-# Accelerated Domino Analytics Distribution - Unsupported\
+# Accelerated Domino Analytics Distribution - Unsupported
 
 This Docker Image for Domino tries to contain the latest release of everything to the extent possible\
 \
