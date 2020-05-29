@@ -20,4 +20,4 @@ Jupyter 1.0.0\
 Rstudio Server 1.3.959\
 VScode 3.4.0\
 CUDA 10.2.89\
-CUDNN 7.6.5.32\
+CUDNN 7.6.5.32
