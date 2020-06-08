@@ -1,6 +1,6 @@
 FROM ubuntu:18.04
 
-LABEL maintainer="Domino Data Lab <support@dominodatalab.com>"
+LABEL maintainer="Petter Olsson <petter@dominodatalab.com>"
 
 #### Utilities required by Domino ####
 ENV DEBIAN_FRONTEND noninteractive
