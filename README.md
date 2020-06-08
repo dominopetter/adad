@@ -2,12 +2,12 @@
 
 This Docker Image for Domino tries to contain the latest release of everything to the extent possible\
 \
-v.2 - 2020-06-08\
+v.5 - 2020-06-08\
 v.1 - 2020-05-29\
 \
 Docker Hub Link         : https://hub.docker.com/repository/docker/petterolsson/adad/general
 
-To add it to Domino Link: docker.io/petterolsson/adad:v1
+To add it to Domino Link: docker.io/petterolsson/adad:v{version}
 
 R 4.0.1\
 Python 3.8\
