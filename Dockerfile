@@ -388,10 +388,10 @@ USER root
 # Some error when I add my own Workspace install script maybe? 
 RUN \
     cd /tmp && \
-    wget -q https://github.com/dominopetter/workspace-configs/archive/v1.0.zip && \
+    wget -q https://github.com/dominopetter/workspaces/archive/v1.0.zip && \
     unzip v1.0.zip && \
-    cp -Rf workspace-configs-1.0/. /var/opt/workspaces && \
-    rm -rf /var/opt/workspaces/workspace-logos && rm -rf /tmp/workspace-configs-1.0/ && \
+    cp -Rf workspaces-1.0/. /var/opt/workspaces && \
+    rm -rf /var/opt/workspaces/workspace-logos && rm -rf /tmp/workspaces-1.0/ && \
     
 # # # # #Install Rstudio from workspaces
 #add update .Rprofile with Domino customizations
@@ -431,7 +431,6 @@ RUN \
     chown -R ubuntu:ubuntu /home/ubuntu/.local/
 
 #### Install CUDA and GPU dependencies #####
-
 ###Install CUDA Base###
 ENV CUDA_VERSION 10.2.89
 ENV CUDA_PKG_VERSION 10-2=$CUDA_VERSION-1
