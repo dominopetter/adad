@@ -1,6 +1,6 @@
 FROM ubuntu:18.04
 
-LABEL maintainer="Petter Olsson <petter@dominodatalab.com>"
+LABEL maintainer="Domino Data Lab <support@dominodatalab.com>"
 
 #### Utilities required by Domino ####
 ENV DEBIAN_FRONTEND noninteractive
@@ -385,12 +385,13 @@ USER root
 
 #### Installing Notebooks,Workspaces,IDEs,etc ####
 # Add workspace install and configuration scripts
+# Some error when I add my own Workspace install script maybe? 
 RUN \
     cd /tmp && \
-    wget -q https://github.com/dominopetter/workspace-configs/archive/v3.zip && \
-    unzip v3.zip && \
-    cp -Rf workspace-configs-3/. /var/opt/workspaces && \
-    rm -rf /var/opt/workspaces/workspace-logos && rm -rf /tmp/workspace-configs-3 && \
+    wget -q https://github.com/dominopetter/workspace-configs/archive/v1.0.zip && \
+    unzip v1.0.zip && \
+    cp -Rf workspace-configs-1.0/. /var/opt/workspaces && \
+    rm -rf /var/opt/workspaces/workspace-logos && rm -rf /tmp/workspace-configs-1.0/ && \
     
 # # # # #Install Rstudio from workspaces
 #add update .Rprofile with Domino customizations
