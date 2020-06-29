@@ -388,10 +388,10 @@ USER root
 # Some error when I add my own Workspace install script maybe? 
 RUN \
     cd /tmp && \
-    wget -q https://github.com/dominopetter/workspaces/archive/v1.0.zip && \
-    unzip v1.0.zip && \
+    wget -q https://github.com/dominopetter/workspaces/archive/1.0.5.zip && \
+    unzip 1.0.5.zip && \
     cp -Rf workspaces-1.0/. /var/opt/workspaces && \
-    rm -rf /var/opt/workspaces/workspace-logos && rm -rf /tmp/workspaces-1.0/ && \
+    rm -rf /var/opt/workspaces/workspace-logos && rm -rf /tmp/workspaces-1.0.5/ && \
     
 # # # # #Install Rstudio from workspaces
 #add update .Rprofile with Domino customizations
